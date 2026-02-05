@@ -19,12 +19,12 @@ def get_db():
         db.close()
 
 
-@app.get("/")
+@app.get("/", tags=["Health"])
 def home():
     return {"message": "hello world"}
 
 
-@app.get("/notes", response_model=List[NoteResponse])
+@app.get("/notes", response_model=List[NoteResponse], tags=["Notes"])
 def get_notes(
     search: Optional[str] = None,
     limit: int = 100,
@@ -49,7 +49,7 @@ def get_notes(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/notes", response_model=NoteResponse)
+@app.post("/notes", response_model=NoteResponse, tags=["Notes"])
 def create_note(noteData: NoteCreate, db: Session = Depends(get_db)):
     try:
         note = Note(heading=noteData.heading, body=noteData.body)
@@ -62,7 +62,7 @@ def create_note(noteData: NoteCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.delete("/notes/{note_id}")
+@app.delete("/notes/{note_id}", tags=["Notes"])
 def delete_note(note_id: int, db: Session = Depends(get_db)):
     try:
         note = db.query(Note).filter(Note.id == id).first()
