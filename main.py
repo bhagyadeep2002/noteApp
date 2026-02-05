@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Optional, Union
+from typing import List, Optional
 
 from fastapi import Depends, FastAPI, HTTPException
 from sqlalchemy.orm import Session
@@ -49,15 +49,28 @@ def get_notes(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/notes")
-def create_note(heading: str, body: str, db: Session = Depends(get_db)):
+@app.post("/notes", response_model=NoteResponse)
+def create_note(noteData: NoteCreate, db: Session = Depends(get_db)):
     try:
-        note = Note(heading=heading, body=body)
+        note = Note(heading=noteData.heading, body=noteData.body)
         db.add(note)
         db.commit()
         db.refresh(note)
+        return note
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
-    return note
+
+@app.delete("/notes/{note_id}")
+def delete_note(note_id: int, db: Session = Depends(get_db)):
+    try:
+        note = db.query(Note).filter(Note.id == id).first()
+        if not note:
+            raise HTTPException(status_code=404, detail="Note not found")
+        db.delete(note)
+        db.commit()
+        return {"message": "Note deleted successfully"}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
