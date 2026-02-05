@@ -63,7 +63,7 @@ def create_note(noteData: NoteCreate, db: Session = Depends(get_db)):
 
 
 @app.delete("/notes/{note_id}", tags=["Notes"])
-def delete_note(note_id: int, db: Session = Depends(get_db)):
+def delete_note(note_id: str, db: Session = Depends(get_db)):
     try:
         note = db.query(Note).filter(Note.id == id).first()
         if not note:
