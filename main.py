@@ -65,7 +65,7 @@ def create_note(noteData: NoteCreate, db: Session = Depends(get_db)):
 @app.delete("/notes/{note_id}", tags=["Notes"])
 def delete_note(note_id: str, db: Session = Depends(get_db)):
     try:
-        note = db.query(Note).filter(Note.id == id).first()
+        note = db.query(Note).filter(Note.id == note_id).first()
         if not note:
             raise HTTPException(status_code=404, detail="Note not found")
         db.delete(note)
