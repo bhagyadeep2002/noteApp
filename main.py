@@ -1,13 +1,23 @@
+import json
+import os
 from datetime import datetime
 from typing import List, Optional
 
+import redis
+from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, HTTPException
+from fastapi.encoders import jsonable_encoder
 from sqlalchemy.orm import Session
 
 from database import SessionLocal
 from models import Note
 from schemas import NoteCreate, NoteResponse
 
+load_dotenv()
+r = redis.from_url(
+    url=os.getenv("RENDER_REDIS_INTERNAL_URL"),
+    port=6379,
+)
 app = FastAPI()
 
 
@@ -33,6 +43,11 @@ def get_notes(
     db: Session = Depends(get_db),
 ):
     try:
+        cache_key = f"allNotes-{search}-{start_date}-{end_date}-{limit}"
+        cached_data = r.get(cache_key)
+        if cached_data:
+            print("cache hit")
+            return json.loads(cached_data)
         query = db.query(Note)
         if search:
             search_filter = f"%{search}%"
@@ -44,6 +59,7 @@ def get_notes(
         if end_date:
             query = query.filter(Note.created_at <= end_date)
         notes = query.order_by(Note.created_at.desc()).limit(limit).all()
+        r.setex(cache_key, 300, json.dumps([jsonable_encoder(note) for note in notes]))
         return notes
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
