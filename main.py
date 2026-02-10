@@ -20,6 +20,8 @@ r = redis.from_url(
 )
 app = FastAPI()
 
+version = r.get("notes:version") or b"1"
+
 
 def get_db():
     db = SessionLocal()
@@ -43,7 +45,9 @@ def get_notes(
     db: Session = Depends(get_db),
 ):
     try:
-        cache_key = f"allNotes-{search}-{start_date}-{end_date}-{limit}"
+        cache_key = (
+            f"allNotes:v{version.decode()}-{search}-{start_date}-{end_date}-{limit}"
+        )
         cached_data = r.get(cache_key)
         if cached_data:
             print("cache hit")
@@ -72,6 +76,7 @@ def create_note(noteData: NoteCreate, db: Session = Depends(get_db)):
         db.add(note)
         db.commit()
         db.refresh(note)
+        r.incr("notes:version")
         return note
     except Exception as e:
         db.rollback()
@@ -86,6 +91,7 @@ def delete_note(note_id: str, db: Session = Depends(get_db)):
             raise HTTPException(status_code=404, detail="Note not found")
         db.delete(note)
         db.commit()
+        r.incr("notes:version")
         return {"message": "Note deleted successfully"}
     except Exception as e:
         db.rollback()
